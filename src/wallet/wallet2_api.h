@@ -219,6 +219,20 @@ struct Wallet
      */
     virtual void initAsync(const std::string &daemon_address, uint64_t upper_transaction_size_limit) = 0;
 
+   /*!
+    * \brief setRefreshFromBlockHeight - start refresh from block height on recover
+    *
+    * \param refresh_from_block_height - blockchain start height
+    */
+    virtual void setRefreshFromBlockHeight(uint64_t refresh_from_block_height) = 0;
+
+   /*!
+    * \brief setRecoveringFromSeed - set state recover form seed
+    *
+    * \param recoveringFromSeed - true/false
+    */
+    virtual void setRecoveringFromSeed(bool recoveringFromSeed) = 0;
+
     /**
      * @brief connectToDaemon - connects to the daemon. TODO: check if it can be removed
      * @return
@@ -254,6 +268,12 @@ struct Wallet
      *             status() will return Status_Error and errorString() will return verbose error description
      */
     virtual uint64_t daemonBlockChainTargetHeight() const = 0;
+
+    /**
+     * @brief synchronized - checks if wallet was ever synchronized
+     * @return
+     */
+    virtual bool synchronized() const = 0;
 
     static std::string displayAmount(uint64_t amount);
     static uint64_t amountFromString(const std::string &amount);
@@ -347,9 +367,11 @@ struct WalletManager
      * \brief  recovers existing wallet using memo (electrum seed)
      * \param  path           Name of wallet file to be created
      * \param  memo           memo (25 words electrum seed)
+     * \param  testnet        testnet
+     * \param  restoreHeight  restore from start height
      * \return                Wallet instance (Wallet::status() needs to be called to check if recovered successfully)
      */
-    virtual Wallet * recoveryWallet(const std::string &path, const std::string &memo, bool testnet = false) = 0;
+    virtual Wallet * recoveryWallet(const std::string &path, const std::string &memo, bool testnet = false, uint64_t restoreHeight = 0) = 0;
 
     /*!
      * \brief Closes wallet. In case operation succeded, wallet object deleted. in case operation failed, wallet object not deleted

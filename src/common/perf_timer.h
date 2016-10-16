@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2016, The Monero Project
+// Copyright (c) 2016, The Monero Project
 // 
 // All rights reserved.
 // 
@@ -25,59 +25,68 @@
 // INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
 // STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF
 // THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
 #pragma once
 
-#include <vector>
+#include <string>
+#include <stdio.h>
+#include "misc_log_ex.h"
 
-#include "cryptonote_core/account.h"
-#include "cryptonote_core/cryptonote_basic.h"
-#include "cryptonote_core/cryptonote_format_utils.h"
-#include "crypto/crypto.h"
-
-#include "multi_tx_test_base.h"
-
-template<size_t a_ring_size>
-class test_check_ring_signature : private multi_tx_test_base<a_ring_size>
+namespace tools
 {
-  static_assert(0 < a_ring_size, "ring_size must be greater than 0");
 
+class PerformanceTimer;
+
+extern int performance_timer_log_level;
+extern __thread std::vector<PerformanceTimer*> *performance_timers;
+
+class PerformanceTimer
+{
 public:
-  static const size_t loop_count = a_ring_size < 100 ? 100 : 10;
-  static const size_t ring_size = a_ring_size;
-
-  typedef multi_tx_test_base<a_ring_size> base_class;
-
-  bool init()
+  PerformanceTimer(const std::string &s, int l = LOG_LEVEL_2): name(s), level(l), started(false)
   {
-    using namespace cryptonote;
-
-    if (!base_class::init())
-      return false;
-
-    m_alice.generate();
-
-    std::vector<tx_destination_entry> destinations;
-    destinations.push_back(tx_destination_entry(this->m_source_amount, m_alice.get_keys().m_account_address));
-
-    if (!construct_tx(this->m_miners[this->real_source_idx].get_keys(), this->m_sources, destinations, std::vector<uint8_t>(), m_tx, 0))
-      return false;
-
-    get_transaction_prefix_hash(m_tx, m_tx_prefix_hash);
-
-    return true;
+    ticks = epee::misc_utils::get_tick_count();
+    if (!performance_timers)
+    {
+      LOG_PRINT("PERF             ----------", level);
+      performance_timers = new std::vector<PerformanceTimer*>();
+    }
+    else
+    {
+      PerformanceTimer *pt = performance_timers->back();
+      if (!pt->started)
+      {
+        LOG_PRINT("PERF           " << std::string((performance_timers->size()-1) * 2, ' ') << "  " << pt->name, pt->level);
+        pt->started = true;
+      }
+    }
+    performance_timers->push_back(this);
   }
 
-  bool test()
+  ~PerformanceTimer()
   {
-    const cryptonote::txin_to_key& txin = boost::get<cryptonote::txin_to_key>(m_tx.vin[0]);
-    return crypto::check_ring_signature(m_tx_prefix_hash, txin.k_image, this->m_public_key_ptrs, ring_size, m_tx.signatures[0].data());
+    performance_timers->pop_back();
+    ticks = epee::misc_utils::get_tick_count() - ticks;
+    char s[12];
+    snprintf(s, sizeof(s), "%8lu  ", ticks);
+    LOG_PRINT("PERF " << s << std::string(performance_timers->size() * 2, ' ') << "  " << name, level);
+    if (performance_timers->empty())
+    {
+      delete performance_timers;
+      performance_timers = NULL;
+    }
   }
 
 private:
-  cryptonote::account_base m_alice;
-  cryptonote::transaction m_tx;
-  crypto::hash m_tx_prefix_hash;
+  std::string name;
+  int level;
+  uint64_t ticks;
+  bool started;
 };
+
+void set_performance_timer_log_level(int level);
+
+#define PERF_TIMER(name) tools::PerformanceTimer pt_##name(#name, tools::performance_timer_log_level)
+#define PERF_TIMER_L(name, l) tools::PerformanceTimer pt_##name(#name, l)
+
+}

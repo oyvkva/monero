@@ -78,10 +78,13 @@ public:
     uint64_t blockChainHeight() const;
     uint64_t daemonBlockChainHeight() const;
     uint64_t daemonBlockChainTargetHeight() const;
+    bool synchronized() const;
     bool refresh();
     void refreshAsync();
     void setAutoRefreshInterval(int millis);
     int autoRefreshInterval() const;
+    void setRefreshFromBlockHeight(uint64_t refresh_from_block_height);
+    void setRecoveringFromSeed(bool recoveringFromSeed);
 
 
 
@@ -108,6 +111,7 @@ private:
 private:
     friend class PendingTransactionImpl;
     friend class TransactionHistoryImpl;
+    friend class Wallet2CallbackImpl;
 
     tools::wallet2 * m_wallet;
     mutable std::atomic<int>  m_status;
@@ -133,6 +137,7 @@ private:
     // so it shouldn't be considered as new and pull blocks (slow-refresh)
     // instead of pulling hashes (fast-refresh)
     bool                m_recoveringFromSeed;
+    std::atomic<bool>   m_synchronized;
 };
 
 
