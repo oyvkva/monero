@@ -2655,7 +2655,7 @@ bool simple_wallet::locked_transfer(const std::vector<std::string> &args_)
     return true;
   }
 
-  int locked_blocks = 0;
+  uint64_t locked_blocks = 0;
   std::vector<uint8_t> extra;
   bool payment_id_seen = false;
   
@@ -2733,8 +2733,8 @@ bool simple_wallet::locked_transfer(const std::vector<std::string> &args_)
     std::vector<tools::wallet2::pending_tx> ptx_vector;
 
     std::string err;
-    int bc_height = get_daemon_blockchain_height(err);
-    int unlock_block = locked_blocks + bc_height;
+    uint64_t bc_height = get_daemon_blockchain_height(err);
+    uint64_t unlock_block = locked_blocks + bc_height;
     ptx_vector = m_wallet->create_transactions_2(dsts, fake_outs_count, unlock_block , 0 /* unused fee arg*/, extra, m_trusted_daemon);
 
     uint64_t total_fee = 0;
